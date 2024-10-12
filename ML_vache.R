@@ -150,6 +150,25 @@ set.seed(123)
 rouage <- cell(dta)
 
 golem_ancien <- perfect_cell(dta)
+summary(golem_ancien$weight_in_kg)
+c("150-210", "210-240", "240-260", "260-275", "275+")
+# Définir les catégories de poids
+golem_ancien$weight_factor <- cut(
+  golem_ancien$weight_in_kg,
+  breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
+  labels = c("150-210", "210-240", "240-275","275+"),  # Libellés des catégories
+  right = FALSE  # Inclure la borne inférieure dans chaque intervalle
+)
 
-read.csv2(rouage, "data_img0")
-read.csv2(golem_ancien, "data_img0rot")
+rouage$weight_factor <- cut(
+  rouage$weight_in_kg,
+  breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
+  labels = c("150-210", "210-240", "240-275","275+"),  # Libellés des catégories
+  right = FALSE  # Inclure la borne inférieure dans chaque intervalle
+)
+
+# Vérifier les résultats
+rouage <- rouage[, c("weight_factor", setdiff(names(rouage), "weight_factor"))]
+golem_ancien <- golem_ancien[, c("weight_factor", setdiff(names(golem_ancien), "weight_factor"))]
+write.csv2(rouage, "data_img0")
+write.csv2(golem_ancien, "data_img0rot")
