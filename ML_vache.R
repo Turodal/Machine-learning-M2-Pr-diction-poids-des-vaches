@@ -6,7 +6,7 @@ library(magick)
 library(keras)
 library(tensorflow)
 library(imager)
-# Vérifiez quel Python est utilisé
+
 
 
 dta <- fread("dataset.csv", sep = ",")
@@ -173,4 +173,4 @@ golem_ancien <- golem_ancien[, c("weight_factor", setdiff(names(golem_ancien), "
 write.csv2(rouage, "data_img0.csv")
 write.csv2(golem_ancien, "data_img0rot.csv")
 
-fread("data_img0.csv")
+
