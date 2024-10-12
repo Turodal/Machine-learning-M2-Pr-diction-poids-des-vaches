@@ -170,5 +170,7 @@ rouage$weight_factor <- cut(
 # Vérifier les résultats
 rouage <- rouage[, c("weight_factor", setdiff(names(rouage), "weight_factor"))]
 golem_ancien <- golem_ancien[, c("weight_factor", setdiff(names(golem_ancien), "weight_factor"))]
-write.csv2(rouage, "data_img0")
-write.csv2(golem_ancien, "data_img0rot")
+write.csv2(rouage, "data_img0.csv")
+write.csv2(golem_ancien, "data_img0rot.csv")
+
+fread("data_img0.csv")
