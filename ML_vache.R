@@ -16,8 +16,95 @@ dta$img_path1 <- glue("images/{dta$sku}/{dta$sku}_1.jpg")
 dta$img_path2 <- glue("images/{dta$sku}/{dta$sku}_2.jpg")
 dta$img_path3 <- glue("images/{dta$sku}/{dta$sku}_3.jpg")
 
+library(imager)
+
+library(imager)
+# Déterminer combien de pixels vous souhaitez enlever
+nb_pixels_gauche <- 140   # Pixels à enlever du haut
+nb_pixels_doit <- 140  # Pixels à enlever du bas
+nb_pixels_haut <- 70   # Pixels à enlever de la gauche
+nb_pixels_bas <- 90   # Pixels à enlever de la droite
+centrage <- function(path) {
+  image <- load.image(path)
+  
+  # Convertir l'image en niveaux de gris
+  gray_image <- grayscale(image)
+  # Vérifiez que les pixels à enlever ne dépassent pas les dimensions de l'image
+  if ((nb_pixels_top + nb_pixels_bottom) >= img_dims[1]) {
+    stop("Le nombre de pixels à enlever en haut et en bas est supérieur ou égal à la hauteur de l'image.")
+  }
+  
+  if ((nb_pixels_left + nb_pixels_right) >= img_dims[2]) {
+    stop("Le nombre de pixels à enlever à gauche et à droite est supérieur ou égal à la largeur de l'image.")
+  }
+  
+  # Découper l'image pour conserver la région souhaitée
+  cropped_image <- gray_image[
+    (nb_pixels_gauche + 1):(img_dims[1] - nb_pixels_doit),  # Lignes
+    (nb_pixels_haut + 1):(img_dims[2] - nb_pixels_bas),  # Colonnes
+    drop = FALSE
+  ]
+  return(cropped_image)
+}
+
+features_simple <- data.frame()
+
+# Afficher l'image découpée
+plot(centrage(dta$img_path0[122]), main = "Image Découpée et Centrée")
 
 
+features <- function(img) {
+  # Calculer le gradient de l'image
+  edges <- imgradient(img, "xy")
+  # Extraire les composants du gradient
+  gradient_x <- edges$x
+  gradient_y <- edges$y
+  # Calculer l'amplitude du gradient
+  magnitude_edges <- sqrt(gradient_x^2 + gradient_y^2)
+  # Binariser l'amplitude des bords
+  binary_edges <- magnitude_edges > 0.03  # Ajustez le seuil selon vos besoins
+  # Convertir l'image binaire en matrice 2D
+  binary_edges_EB <- as.Image(1-binary_edges)
+  # Segmenter les objets dans l'image binaire
+  segmented_edges <- bwlabel(binary_edges_EB)
+  # Convertir en matrice 2D
+  segmented_edges_2D <- drop(segmented_edges)
+  # Extraire les caractéristiques géométriques des objets segmentés
+  features_edges <- computeFeatures.shape(segmented_edges_2D)
+  return(features_edges[which(features_edges ==max(features_edges)),])
+}
+
+poids <- data.frame(Poids = dta$weight_in_kg)
+test <- features(centrage(dta$img_path3[1]))
+test2 <- features(centrage(dta$img_path3[10]))
+poids_df <- do.call(rbind, test2)
+cbind(poids,poids_df)
+
+
+polymerisation <- function(path) {
+  feat <- lapply(path, FUN = function(pathe) {
+    features(centrage(pathe))
+  })
+  poids <- data.frame(Poids = dta$weight_in_kg)
+  poids_df <- do.call(rbind, feat)
+  cbind(poids,poids_df)
+}
+
+
+
+features_simple <- function(data) {
+  lapply(data$img_path3, function(path) {
+    image <- readImage(path)
+    # Conversion en niveaux de gris
+    gray_image <- channel(image, "gray")
+    # Binarisation de l'image
+    binary_image <- thresh(gray_image, w=15, h=15, offset=0.05)
+    # Segmentation par transformation
+    segmented <- bwlabel(binary_image)
+    display(segmented)
+    features <- computeFeatures.moment(segmented, image)
+    print(features)
+  })}
 # Charger VGG16 avec des poids ImageNet
 weights_path <- "vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5"
 
@@ -60,7 +147,7 @@ preprocess_image_magick_with_rotation <- function(path, angle = 0) {
 #'
 #' @examples
 features_list <- function(data, angle2 = 0, boucle = 1) {
-  lapply(data$img_path0, function(path) {
+  lapply(data$img_path3, function(path) {
     tryCatch({
       img <- preprocess_image_magick_with_rotation(path, angle = angle2[boucle]) 
       print(boucle+10)# Utiliser la fonction de prétraitement
@@ -167,10 +254,20 @@ rouage$weight_factor <- cut(
   right = FALSE  # Inclure la borne inférieure dans chaque intervalle
 )
 
+features_simple <- polymerisation(dta$img_path1)
+features_simple$weight_factor <- cut(
+  features_simple$Poids,
+  breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
+  labels = c("150-210", "210-240", "240-275","275+"),  # Libellés des catégories
+  right = FALSE  # Inclure la borne inférieure dans chaque intervalle
+)
+features_simple <- features_simple[, c("weight_factor", setdiff(names(features_simple), "weight_factor"))]
+write.csv2(features_simple, "data_img1simple.csv")
+
 # Vérifier les résultats
 rouage <- rouage[, c("weight_factor", setdiff(names(rouage), "weight_factor"))]
 golem_ancien <- golem_ancien[, c("weight_factor", setdiff(names(golem_ancien), "weight_factor"))]
-write.csv2(rouage, "data_img0.csv")
+write.csv2(rouage, "data_img3.csv")
 write.csv2(golem_ancien, "data_img0rot.csv")
 
 
