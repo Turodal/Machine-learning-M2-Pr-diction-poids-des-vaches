@@ -10,19 +10,23 @@ library(imager)
 
 
 dta <- fread("donnees/dataset.csv", sep = ",")
+#sku est le nom de la vache
 dta$sku <- as.factor(dta$sku)
+#va chercher le chemin des images pour toutes les vaches
 dta$img_path0 <- glue("images/{dta$sku}/{dta$sku}_0.jpg")
 dta$img_path1 <- glue("images/{dta$sku}/{dta$sku}_1.jpg")
 dta$img_path2 <- glue("images/{dta$sku}/{dta$sku}_2.jpg")
 dta$img_path3 <- glue("images/{dta$sku}/{dta$sku}_3.jpg")
 
 
-library(imager)
+
 # Déterminer combien de pixels vous souhaitez enlever
-nb_pixels_gauche <- 140   # Pixels à enlever du haut
-nb_pixels_doit <- 140  # Pixels à enlever du bas
-nb_pixels_haut <- 70   # Pixels à enlever de la gauche
-nb_pixels_bas <- 90   # Pixels à enlever de la droite
+nb_pixels_gauche <- 140   # Pixels à enlever de la gauche
+nb_pixels_doit <- 140  # Pixels à enlever de la droite
+nb_pixels_haut <- 70   # Pixels à enlever du haut
+nb_pixels_bas <- 90   # Pixels à enlever du bas
+
+#permet de centrer l'image sur la vache
 centrage <- function(path) {
   image <- load.image(path)
   
@@ -44,6 +48,7 @@ centrage <- function(path) {
   return(cropped_image)
 }
 
+#permet de segmenter l'image 
 features <- function(img) {
   # Calculer le gradient de l'image
   edges <- imgradient(img, "xy")
@@ -65,13 +70,8 @@ features <- function(img) {
   return(features_edges[which(features_edges ==max(features_edges)),])
 }
 
-poids <- data.frame(Poids = dta$weight_in_kg)
-test <- features(centrage(dta$img_path3[1]))
-test2 <- features(centrage(dta$img_path3[10]))
-poids_df <- do.call(rbind, test2)
-cbind(poids,poids_df)
 
-
+#programme qui permet d'extraire des features simple sur la vache (air/perimètre)
 polymerisation <- function(path) {
   feat <- lapply(path, FUN = function(pathe) {
     features(centrage(pathe))
@@ -83,27 +83,12 @@ polymerisation <- function(path) {
 
 
 
-features_simple <- function(data) {
-  lapply(data$img_path3, function(path) {
-    image <- readImage(path)
-    # Conversion en niveaux de gris
-    gray_image <- channel(image, "gray")
-    # Binarisation de l'image
-    binary_image <- thresh(gray_image, w=15, h=15, offset=0.05)
-    # Segmentation par transformation
-    segmented <- bwlabel(binary_image)
-    display(segmented)
-    features <- computeFeatures.moment(segmented, image)
-    print(features)
-  })}
 # Charger VGG16 avec des poids ImageNet
-weights_path <- "vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5"
+weights_path <- "donnees/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5"
 
 # Charger le modèle VGG16 sans la couche supérieure
 vgg_model <- tf$keras$applications$vgg16$VGG16(weights = weights_path, include_top = FALSE)
 
-# Vérifiez le résumé du modèle
-summary(vgg_model)
 
 # Fonction de prétraitement des images avec magick
 #' Title
