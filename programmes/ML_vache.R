@@ -210,27 +210,29 @@ perfect_cell <- function(dta) {
 }
 
 set.seed(123)
-rouage <- cell(dta)
+dta_1img <- cell(dta)
 
-golem_ancien <- perfect_cell(dta)
-summary(golem_ancien$weight_in_kg)
+dta_rotation <- perfect_cell(dta)
+summary(dta_rotation$weight_in_kg)
 c("150-210", "210-240", "240-260", "260-275", "275+")
 # Définir les catégories de poids
-golem_ancien$weight_factor <- cut(
-  golem_ancien$weight_in_kg,
+dta_rotation$weight_factor <- cut(
+  dta_rotation$weight_in_kg,
   breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
   labels = c("150-210", "210-240", "240-275","275+"),  # Libellés des catégories
   right = FALSE  # Inclure la borne inférieure dans chaque intervalle
 )
 
-rouage$weight_factor <- cut(
-  rouage$weight_in_kg,
+# Définir les catégories de poids
+dta_1img$weight_factor <- cut(
+  dta_1img$weight_in_kg,
   breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
   labels = c("150-210", "210-240", "240-275","275+"),  # Libellés des catégories
   right = FALSE  # Inclure la borne inférieure dans chaque intervalle
 )
 
 features_simple <- polymerisation(dta$img_path0)
+# Définir les catégories de poids
 features_simple$weight_factor <- cut(
   features_simple$Poids,
   breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
@@ -240,10 +242,10 @@ features_simple$weight_factor <- cut(
 features_simple <- features_simple[, c("weight_factor", setdiff(names(features_simple), "weight_factor"))]
 write.csv2(features_simple, "data_img0simple.csv")
 
-# Vérifier les résultats
-rouage <- rouage[, c("weight_factor", setdiff(names(rouage), "weight_factor"))]
-golem_ancien <- golem_ancien[, c("weight_factor", setdiff(names(golem_ancien), "weight_factor"))]
-write.csv2(rouage, "data_img3.csv")
-write.csv2(golem_ancien, "data_img0rot.csv")
+# fait tourner les programmes pour toutes les images 
+dta_1img <- dta_1img[, c("weight_factor", setdiff(names(dta_1img), "weight_factor"))]
+dta_rotation <- dta_rotation[, c("weight_factor", setdiff(names(dta_rotation), "weight_factor"))]
+write.csv2(dta_1img, "data_img3.csv")
+write.csv2(dta_rotation, "data_img0rot.csv")
 
 
