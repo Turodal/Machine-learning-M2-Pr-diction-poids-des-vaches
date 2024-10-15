@@ -16,7 +16,6 @@ dta$img_path1 <- glue("images/{dta$sku}/{dta$sku}_1.jpg")
 dta$img_path2 <- glue("images/{dta$sku}/{dta$sku}_2.jpg")
 dta$img_path3 <- glue("images/{dta$sku}/{dta$sku}_3.jpg")
 
-library(imager)
 
 library(imager)
 # Déterminer combien de pixels vous souhaitez enlever
@@ -33,11 +32,9 @@ centrage <- function(path) {
   if ((nb_pixels_top + nb_pixels_bottom) >= img_dims[1]) {
     stop("Le nombre de pixels à enlever en haut et en bas est supérieur ou égal à la hauteur de l'image.")
   }
-  
   if ((nb_pixels_left + nb_pixels_right) >= img_dims[2]) {
     stop("Le nombre de pixels à enlever à gauche et à droite est supérieur ou égal à la largeur de l'image.")
   }
-  
   # Découper l'image pour conserver la région souhaitée
   cropped_image <- gray_image[
     (nb_pixels_gauche + 1):(img_dims[1] - nb_pixels_doit),  # Lignes
@@ -46,12 +43,6 @@ centrage <- function(path) {
   ]
   return(cropped_image)
 }
-
-features_simple <- data.frame()
-
-# Afficher l'image découpée
-plot(centrage(dta$img_path0[122]), main = "Image Découpée et Centrée")
-
 
 features <- function(img) {
   # Calculer le gradient de l'image
@@ -254,7 +245,7 @@ rouage$weight_factor <- cut(
   right = FALSE  # Inclure la borne inférieure dans chaque intervalle
 )
 
-features_simple <- polymerisation(dta$img_path1)
+features_simple <- polymerisation(dta$img_path0)
 features_simple$weight_factor <- cut(
   features_simple$Poids,
   breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
@@ -262,7 +253,7 @@ features_simple$weight_factor <- cut(
   right = FALSE  # Inclure la borne inférieure dans chaque intervalle
 )
 features_simple <- features_simple[, c("weight_factor", setdiff(names(features_simple), "weight_factor"))]
-write.csv2(features_simple, "data_img1simple.csv")
+write.csv2(features_simple, "data_img0simple.csv")
 
 # Vérifier les résultats
 rouage <- rouage[, c("weight_factor", setdiff(names(rouage), "weight_factor"))]

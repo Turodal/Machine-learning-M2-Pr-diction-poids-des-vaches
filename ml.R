@@ -6,15 +6,15 @@ library(dplyr)
 
 library(FactoMineR)
 # Charger les données
-img0 <- fread("data_img0.csv", stringsAsFactors = TRUE)[,-c(1,3)]
+dta <- fread("data_img0.csv", stringsAsFactors = TRUE)[,-c(1,3)]
 
 # Séparer le jeu de données en deux parties : entraînement et test
 set.seed(123)  # Pour assurer la reproductibilité
-trainIndex <- createDataPartition(img0$weight_factor, p = 0.7, list = FALSE)  # 70% pour le train
+trainIndex <- createDataPartition(dta$weight_factor, p = 0.7, list = FALSE)  # 70% pour le train
 trainData <- dta[trainIndex,]
 testData <- dta[-trainIndex,]
 
-acp <- PCA(img0, quali.sup = 1)
+acp <- PCA(dta, quali.sup = 1)
 qualitative_variable <- as.factor(dta[[1]]) 
 # Définir les couleurs pour chaque niveau de la variable qualitative
 colors <- c("red", "blue", "green", "orange")  # Choisissez vos 4 couleurs
@@ -43,7 +43,7 @@ registerDoParallel(cl)  # Enregistrer le cluster
 trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = c(10, 50, 60,100))
+tuneGrid <- expand.grid(mtry = c(10, 50,100, 200, 300))
 
 
 mod.rf <- caret::train(
@@ -64,16 +64,34 @@ print(cm.rf)
 importance <- varImp(mod.rf)
 print(importance)
 # Modèle SVM
-cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
-registerDoParallel(cl)
+
+
 
 
 # Prétraitement des données
-preProcValues <- preProcess(trainData[, -which(names(trainData) == "weight_factor")], method = c("center", "scale"))
-trainData_scaled <- predict(preProcValues, trainData)
-testData_scaled <- predict(preProcValues, testData)
+
+# Normaliser les colonnes (tout sauf 'weight_factor')
+trainData_normalized <- trainData[, -c("weight_factor")]
+# Appliquer la standardisation (centrer et réduire)
+trainData_normalized <- as.data.frame(lapply(trainData_normalized, function(x) (x - mean(x)) / sd(x)))
+#Ajoute le poids aux données
+trainData_scaled <- cbind(weight_factor = trainData$weight_factor, trainData_normalized)
+
+
+# Normaliser les colonnes (tout sauf 'weight_factor')
+testData_normalized <- testData[, -c("weight_factor")]
+# Appliquer la standardisation (centrer et réduire)
+testData_normalized <- as.data.frame(lapply(testData_normalized, function(x) (x - mean(x)) / sd(x)))
+#Ajoute le poids aux données
+testData_scaled <- cbind(weight_factor = testData$weight_factor, testData_normalized)
+testData_scaled[is.na(testData_scaled)] <- 0
+
+#Modèle SVM
+cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
+registerDoParallel(cl)
 tuneGrid <- expand.grid(C = c(0.1, 0.5, 1, 10), 
                         sigma = c(0.01, 0.1, 0.5, 1))
+
 
 mod.svm <- train(
   weight_factor ~ ., 
@@ -118,7 +136,7 @@ registerDoParallel(cl)
 train_control_knn <- trainControl(method = "repeatedcv", number = 10, repeats = 3, classProbs = TRUE)
 
 # Définir une grille d'hyperparamètres à tester pour k
-k_values <- data.frame(k = seq(1, 20, by = 2))  # Tester les valeurs de k de 1 à 20
+k_values <- data.frame(k = seq(1, 100, by = 2))  # Tester les valeurs de k de 1 à 20
 
 # Entraîner le modèle KNN
 mod.knn <- train(
@@ -136,12 +154,34 @@ stopCluster(cl)
 pred.knn <- predict(mod.knn, newdata = testData_scaled)
 cm.knn <- confusionMatrix(pred.knn, testData_scaled$weight_factor)
 
-
+cm.knn
 #####----Comparaison entre les méthodes----#######
 ##################################################
 
-acc <- list( Acc = c(cm.rf$overall[1], cm.svm$overall[1], cm.nnet$overall[1], cm.knn$overall[1]),
+acc_test <- list( Acc = c(cm.rf$overall[1], cm.svm$overall[1], cm.nnet$overall[1], cm.knn$overall[1]),
              Methode = c("Random Forest", "SVM", "nnet", "knn"))
 
+acc_dftest <- data.frame(Methode = acc_test$Methode, Accuracy = acc_test$Acc)
 
-plot(acc)
+acc_train <- list( Acc = c(mod.rf$results$Accuracy, mod.svm$results$Accuracy, mod.nnet$results$Accuracy, mod.knn$results$Accuracy),
+                   Methode = c("Random Forest", "SVM", "nnet", "knn"))
+acc_dftrain <- data.frame(Methode = acc_train$Methode, Accuracy = acc_train$Acc)
+
+
+# Créer le graphique à barres
+ggplot(acc_dftrain, aes(x = Methode, y = Accuracy, fill = Methode)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Accuracy par Méthode lors du train",
+       x = "Méthode",
+       y = "Accuracy") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Créer le graphique à barres
+ggplot(acc_dftest, aes(x = Methode, y = Accuracy, fill = Methode)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Accuracy par Méthode lors du test",
+       x = "Méthode",
+       y = "Accuracy") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
