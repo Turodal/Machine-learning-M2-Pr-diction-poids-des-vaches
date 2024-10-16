@@ -250,7 +250,7 @@ perfect_cell <- function(dta) {
   for (k in 1:4) {
     poids <- data.frame(Poids = dta$weight_in_kg)
     print(k)
-    features <- features_list(dta$img0, angles, boucle = k)
+    features <- features_list(dta$img0, angles, boucle = k, chemin = "img_path0")
     dta_fusionne <- super_polymerisation(features)
     print(k+100)
     print(k+1000)
