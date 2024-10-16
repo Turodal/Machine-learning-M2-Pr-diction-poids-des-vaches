@@ -6,6 +6,7 @@ library(magick)
 library(keras)
 library(tensorflow)
 library(imager)
+library(dplyr)
 
 
 
@@ -122,8 +123,8 @@ preprocess_image_magick_with_rotation <- function(path, angle = 0) {
 #' @export
 #'
 #' @examples
-features_list <- function(data, angle2 = 0, boucle = 1) {
-  lapply(data$img_path3, function(path) {
+features_list <- function(data, angle2 = 0, boucle = 1, chemin) {
+  lapply(data[[chemin]], function(path) {
     tryCatch({
       img <- preprocess_image_magick_with_rotation(path, angle = angle2[boucle]) 
       print(boucle+10)# Utiliser la fonction de prétraitement
@@ -134,6 +135,7 @@ features_list <- function(data, angle2 = 0, boucle = 1) {
       return(NA)  # Gérer les erreurs en renvoyant NA
     })
   })}
+
 
 # Extraire les caractéristiques avec gestion d'erreurs
 
@@ -168,6 +170,22 @@ filtrer <- function(features_list, data) {
 }
 
 
+super_polymerisation <- function(features_list, data) {
+  # Filtrer les éléments non-NA
+  features <- Filter(function(x) !is.na(x), features_list)
+  # Concaténer les résultats si la liste n'est pas vide
+  if (length(features) > 0) {
+    features_df <- do.call(rbind, features)
+  } else {
+    features_df <- NULL  # Si tout est NA, on retourne NULL
+  }
+  # Supposons que 'dta' et 'features_list' sont déjà définis
+  # Concaténer les données
+  data <- cbind(dta, features_df)
+  data <- data[, -c(1:8,10:18)]  
+  return(data)
+}
+
 #' Title
 #'
 #' @param dta dta qu'on définie au début du programme
@@ -184,7 +202,38 @@ cell <- function(dta) {
   return(total[,-1])
 }
 
+true_filtrage <- function(data) {
+  data[nrow(data) + 1, ] <- apply(data, 2, FUN = sum)
+  last_row <- data[nrow(data), ]
+  cols_to_remove <- last_row == 0
+  data <- data[, !cols_to_remove]
+  return(data)
+}
 
+
+
+four_sword <- function(dta) {
+  total <- data.frame(Poids = dta$weight_in_kg)
+  images <- c("img_path0","img_path1","img_path2","img_path3")
+  for (k in 1:4) {
+    poids <- data.frame(Poids = dta$weight_in_kg)
+    print(images[k])
+    features <- features_list(dta, chemin = images[k])
+    dta_fusionne <- super_polymerisation(features)
+    print(k+100)
+    print(k+1000)
+    if (k == 1){
+      print(dim(total))
+      print(dim(dta_fusionne))
+      total <- cbind(total, dta_fusionne)
+    } else {
+      poids <- cbind(poids, dta_fusionne)
+      total <- rbind(poids,total)
+    }
+    
+  }
+  return(total[-1])
+}
 
 #' Title
 #'
@@ -197,14 +246,23 @@ cell <- function(dta) {
 #' @examples
 perfect_cell <- function(dta) {
   total <- data.frame(Poids = dta$weight_in_kg)
-  angles <- sample(c(1:360), size = 10, replace = FALSE)
-  for (k in 1:10) {
+  angles <- c(0,90,180,270)
+  for (k in 1:4) {
+    poids <- data.frame(Poids = dta$weight_in_kg)
     print(k)
-    features <- features_list(dta, angles, boucle = k)
+    features <- features_list(dta$img0, angles, boucle = k)
+    dta_fusionne <- super_polymerisation(features)
     print(k+100)
-    dta_filtre <- filtrer(features, dta)
     print(k+1000)
-    total <- cbind(total, dta_filtre)
+    if (k == 1){
+      print(dim(total))
+      print(dim(dta_fusionne))
+      total <- cbind(total, dta_fusionne)
+    } else {
+      poids <- cbind(poids, dta_fusionne)
+      total <- rbind(poids,total)
+    }
+    
   }
   return(total[-1])
 }
@@ -212,7 +270,14 @@ perfect_cell <- function(dta) {
 set.seed(123)
 dta_1img <- cell(dta)
 
+
+
 dta_rotation <- perfect_cell(dta)
+dta_rotation <- true_filtrage(dta_rotation)
+
+dta_4img <- four_sword(dta)
+dta_4img <- true_filtrage(dta_4img)
+
 summary(dta_rotation$weight_in_kg)
 c("150-210", "210-240", "240-260", "260-275", "275+")
 # Définir les catégories de poids
@@ -242,145 +307,20 @@ features_simple$weight_factor <- cut(
 features_simple <- features_simple[, c("weight_factor", setdiff(names(features_simple), "weight_factor"))]
 write.csv2(features_simple, "data_img0simple.csv")
 
+dta_4img$weight_in_kg <- as.numeric(dta_4img$weight_factor)
+
+dta_4img$weight_factor <- cut(
+  dta_4img$weight_in_kg,
+  breaks = c(150, 210, 240, 275, Inf),  # Intervalles des catégories
+  labels = c("150-210", "210-240", "240-275","275+"),  # Libellés des catégories
+  right = FALSE  # Inclure la borne inférieure dans chaque intervalle
+)
+dta_4img <- dta_4img[, c("weight_factor", setdiff(names(dta_4img), "weight_factor"))]
+
 # fait tourner les programmes pour toutes les images 
 dta_1img <- dta_1img[, c("weight_factor", setdiff(names(dta_1img), "weight_factor"))]
 dta_rotation <- dta_rotation[, c("weight_factor", setdiff(names(dta_rotation), "weight_factor"))]
 write.csv2(dta_1img, "data_img3.csv")
 write.csv2(dta_rotation, "data_img0rot.csv")
-
-##On crée un réseau de neurones pour prédire la catégorie des vaches avec les features obtenus avec VGG----
-
-
-
-
-#On utilise les features pour les img0 du jeu de données pour gagner du temps de calcul
-dta1 <- fread("donnees/data_img0rot.csv")
-
-#On extrait les features et on les normalise
-features <- as.matrix(dta1[,-c(1:3)])
-features <- scale(features)
-
-#On extrait les classes de poids et on les passes au format 1,2,3,4
-class <- dta1[,2]
-class <- as.numeric(as.factor(class$weight_factor))
-
-num_classes <- length(unique(class))
-#On passe au format 0,1,2,3 pour le réseau de neurones
-labels_cat <- to_categorical(class -1, num_classes = num_classes)
-
-#On sépare le jeu de données en train_set et test_set (80/20)
-set.seed(245)
-indices <- sample(1:nrow(dta1), size = 0.8 * nrow(dta1)) # 80% pour l'entraînement
-
-train_features <- features[indices,]
-train_label <- labels_cat[indices,]
-
-test_features <- features[-indices,]
-test_label <- labels_cat[-indices,]
-
-
-#On définie l'architecture du modèle
-model_1 <- keras_model_sequential() %>%
-  layer_dense(units = 64,input_shape = c(ncol(features)))%>%
-  layer_activation_leaky_relu() %>%
-  # layer_dense(units = 32)%>%
-  # layer_activation_leaky_relu() %>% 
-  layer_dense(units = num_classes, activation = 'softmax')
-
-#On définie la fonction de perte et le critère d'optimisation
-model_1 %>% compile(
-  loss = 'categorical_crossentropy',  
-  optimizer = optimizer_adam(learning_rate = 0.0001), 
-  metrics = c('accuracy')
-)
-
-#On entraine le modèle, les poids sont modifiés toutes les 64 lignes du train set (sélectionnées au hasard)
-#Le modèle tourne comme cela 100 fois "epochs"
-history <- model_1 %>% fit(
-  x = train_features, 
-  y = train_label,
-  batch_size = 64,
-  epochs = 100,
-  validation_split = 0.2,
-  callbacks = list(
-    callback_early_stopping(monitor = "val_loss", patience = 10) #Si la valeur de le fonction de perte reste stable sur 10 epochs on arrête le l'entrainement 
-  )
-)
-
-#On regarde les résultats pour le test_set
-#On a une accuracy autour de 0.55
-results <- model_1 %>% evaluate(test_features, test_label)
-cat("Test Loss:", results["loss"], "\n")
-cat("Test Accuracy:", results["accuracy"], "\n")
-
-
-#Réseau de neurones pour prédire le poids d'une vache à partir des features de VGG_16----
-
-dta1 <- fread("donnees/data_img0.csv")
-
-#On extrait les features et les poids des vaches
-features <- as.matrix(dta1[, -c(1:3)])
-target <- dta1$weight_in_kg  
-
-# Normalisation des features
-features <- scale(features)
-
-# Division des données en ensembles d'entraînement et de test
-#On prédéfini une seed et on sépare les données en 80% entrainement et 20% test
-set.seed(123)
-indices <- sample(1:nrow(dta1), size = 0.8 * nrow(dta1)) # 80% pour l'entraînement
-
-train_features <- features[indices,]
-train_target <- target[indices]
-
-test_features <- features[-indices,]
-test_target <- target[-indices]
-
-# Création du modèle : on a 3 couches
-model <- keras_model_sequential() %>%
-  layer_dense(units = 256,input_shape = ncol(features)) %>% 
-  layer_activation_leaky_relu() %>%
-  layer_dropout(rate = 0.5) %>%
-  layer_dense(units = 128,activation="relu") %>%
-  layer_dropout(rate = 0.6) %>%
-  layer_dense(units = 128) %>%
-  layer_dropout(rate = 0.5) %>%
-  layer_dense(units = 1)  # Couche de sortie avec 1 unité (prédiction d'une valeur continue)
-
-#On définit la fonction de perte et le critère d'optimisation
-model %>% compile(
-  loss = "mse",  #La fonction de perte est l'erreur absolue moyenne
-  optimizer = optimizer_adam(learning_rate = 0.0001),
-  metrics = c("mean_absolute_error")  # On mesure l'erreur absolue moyenne
-)
-
-# Entraînement du modèle
-history <- model %>% fit(
-  x = train_features,
-  y = train_target,
-  epochs = 200,
-  batch_size = 64,
-  validation_split = 0.2,  
-  callbacks = list(
-    callback_early_stopping(monitor = "val_loss", patience = 10),  # Arrêt précoce si pas d'amélioration
-    callback_reduce_lr_on_plateau(monitor = "val_loss", factor = 0.5, patience = 5)  # Réduction du learning rate si plateau
-  )
-)
-
-# Évaluation du modèle sur les données de test
-results <- model %>% evaluate(test_features, test_target)
-cat("Test Mean Squared Error:", results["loss"], "\n")
-cat("Test Mean Absolute Error:", results["mean_absolute_error"], "\n")
-
-# Prédiction
-predictions <- model %>% predict(test_features)
-print(predictions[1:10]-test_target[1:10])
-print(max(predictions-test_target))
-print(min(predictions-test_target))
-
-#Le modèle actuelle a tendance à sous estimer le poids des vaches, des ajustements sont prévus
-plot(test_target,predictions)
-abline(a=0,b=1)
-
-
+write.csv2(dta_4img, "data_4img.csv")
 
