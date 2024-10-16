@@ -250,8 +250,11 @@ write.csv2(dta_rotation, "data_img0rot.csv")
 
 ##On crée un réseau de neurones pour prédire la catégorie des vaches avec les features obtenus avec VGG----
 
+
+
+
 #On utilise les features pour les img0 du jeu de données pour gagner du temps de calcul
-dta1 <- fread("donnees/data_img0.csv")
+dta1 <- fread("donnees/data_img0rot.csv")
 
 #On extrait les features et on les normalise
 features <- as.matrix(dta1[,-c(1:3)])
@@ -278,11 +281,10 @@ test_label <- labels_cat[-indices,]
 
 #On définie l'architecture du modèle
 model_1 <- keras_model_sequential() %>%
-  layer_dense(units = 512,input_shape = c(ncol(features)))%>%
-  layer_activation_leaky_relu() %>% 
-  layer_dropout(rate = 0.6) %>%
-  layer_dense(units = 256) %>%
-  layer_dropout(rate = 0.6) %>%
+  layer_dense(units = 64,input_shape = c(ncol(features)))%>%
+  layer_activation_leaky_relu() %>%
+  # layer_dense(units = 32)%>%
+  # layer_activation_leaky_relu() %>% 
   layer_dense(units = num_classes, activation = 'softmax')
 
 #On définie la fonction de perte et le critère d'optimisation
@@ -299,7 +301,7 @@ history <- model_1 %>% fit(
   y = train_label,
   batch_size = 64,
   epochs = 100,
-  validation_data = list(test_features,test_label),
+  validation_split = 0.2,
   callbacks = list(
     callback_early_stopping(monitor = "val_loss", patience = 10) #Si la valeur de le fonction de perte reste stable sur 10 epochs on arrête le l'entrainement 
   )
@@ -341,8 +343,8 @@ model <- keras_model_sequential() %>%
   layer_dropout(rate = 0.5) %>%
   layer_dense(units = 128,activation="relu") %>%
   layer_dropout(rate = 0.6) %>%
-  layer_dense(units = 128,activation="relu") %>%
-  layer_dropout(rate = 0.6) %>%
+  layer_dense(units = 128) %>%
+  layer_dropout(rate = 0.5) %>%
   layer_dense(units = 1)  # Couche de sortie avec 1 unité (prédiction d'une valeur continue)
 
 #On définit la fonction de perte et le critère d'optimisation
@@ -358,7 +360,7 @@ history <- model %>% fit(
   y = train_target,
   epochs = 200,
   batch_size = 64,
-  validation_data = list(test_features,test_target),  
+  validation_split = 0.2,  
   callbacks = list(
     callback_early_stopping(monitor = "val_loss", patience = 10),  # Arrêt précoce si pas d'amélioration
     callback_reduce_lr_on_plateau(monitor = "val_loss", factor = 0.5, patience = 5)  # Réduction du learning rate si plateau
