@@ -128,7 +128,7 @@ testData_scaled[is.na(testData_scaled)] <- 0
 #Modèle SVM
 cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
 registerDoParallel(cl)
-tuneGrid <- expand.grid(C = c(0, 0.01, 0.05))
+tuneGrid <- expand.grid(C = c(0.1, 0.01, 0.05))
 
 
 mod.svm <- train(
@@ -151,7 +151,7 @@ cm.svm
 #Choisi un C = 0.05
 cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
 registerDoParallel(cl)
-tuneGrid <- expand.grid(C = 0)
+tuneGrid <- expand.grid(C = 0.01)
 
 
 mod.svm <- train(
