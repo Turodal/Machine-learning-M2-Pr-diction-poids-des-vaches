@@ -44,7 +44,7 @@ registerDoParallel(cl)  # Enregistrer le cluster
 trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = c(10, 50,100, 200, 300))
+tuneGrid <- expand.grid(mtry = seq(50, 500, by = 50))
 
 
 mod.rf <- caret::train(
@@ -64,11 +64,9 @@ print(cm.rf)
 
 importance <- varImp(mod.rf)
 print(importance)
+
+
 # Modèle SVM
-
-
-
-
 # Prétraitement des données
 
 # Normaliser les colonnes (tout sauf 'weight_factor')
@@ -90,14 +88,13 @@ testData_scaled[is.na(testData_scaled)] <- 0
 #Modèle SVM
 cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
 registerDoParallel(cl)
-tuneGrid <- expand.grid(C = c(0.1, 0.5, 1, 10), 
-                        sigma = c(0.01, 0.1, 0.5, 1))
+tuneGrid <- expand.grid(C = c(0.1, 0.05, 0.01))
 
 
 mod.svm <- train(
   weight_factor ~ ., 
   data = trainData_scaled,
-  method = "svmRadial",
+  method = "svmLinear",
   trControl = trainControl,
   tuneGrid = tuneGrid
 )
@@ -137,7 +134,7 @@ registerDoParallel(cl)
 train_control_knn <- trainControl(method = "repeatedcv", number = 10, repeats = 3, classProbs = TRUE)
 
 # Définir une grille d'hyperparamètres à tester pour k
-k_values <- data.frame(k = seq(1, 100, by = 2))  # Tester les valeurs de k de 1 à 20
+k_values <- data.frame(k = seq(1, 200, by = 2))   # Tester les valeurs de k de 1 à 20
 
 # Entraîner le modèle KNN
 mod.knn <- train(

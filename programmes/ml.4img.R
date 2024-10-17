@@ -6,20 +6,9 @@ library(dplyr)
 library(nnet)
 library(FactoMineR)
 # Charger les données
-img0 <- fread("donnees/data_img0.csv", stringsAsFactors = TRUE)[,-c(1,3)]
-img1 <- fread("donnees/data_img1.csv", stringsAsFactors = TRUE)[,-c(1,2,3)]
-img2 <- fread("donnees/data_img2.csv", stringsAsFactors = TRUE)[,-c(1,2,3)]
-img3 <- fread("donnees/data_img3.csv", stringsAsFactors = TRUE)[,-c(1,2,3)]
-# Renommer les colonnes avec dplyr
-img2 <- img2 %>%
-  rename_with(~ paste(., "img2", sep = "-"))
-img1 <- img1 %>%
-  rename_with(~ paste(., "img1", sep = "-"))
-img3 <- img3 %>%
-  rename_with(~ paste(., "img3", sep = "-"))
 
-
-dta <- cbind(img0,img1,img2,img3)
+dta <- img3 <- fread("donnees/data_4img.csv", stringsAsFactors = TRUE)[,-c(1,3)]
+dta <- dta[1:2052]
 
 set.seed(123)  # Pour assurer la reproductibilité
 trainIndex <- createDataPartition(dta$weight_factor, p = 0.7, list = FALSE)  # 70% pour le train
@@ -55,8 +44,50 @@ registerDoParallel(cl)  # Enregistrer le cluster
 trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = c(10, 50,100, 200, 300))
+tuneGrid <- expand.grid(mtry = seq(50, 500, by = 50))
 
+# Liste pour stocker les résultats
+results <- list()
+
+# Boucle sur les différentes valeurs de ntree
+ntree_values <- c(100, 200, 300, 400, 500) 
+
+for (ntree in ntree_values) {
+  # Entraînement du modèle Random Forest pour chaque ntree
+  mod.rf <- caret::train(
+    weight_factor ~ ., 
+    data = trainData,
+    method = "rf",
+    trControl = trainControl,
+    ntree = ntree,
+    tuneGrid = tuneGrid
+  )
+  
+  # Obtenir le meilleur mtry et l'accuracy associée
+  best_mtry <- mod.rf$bestTune$mtry
+  best_accuracy <- max(mod.rf$results$Accuracy)
+  
+  # Stocker les résultats dans la liste
+  results[[as.character(ntree)]] <- list(
+    ntree = ntree,
+    best_mtry = best_mtry,
+    best_accuracy = best_accuracy
+  )
+}
+#meilleur: ntree = 500 et mtry = 100
+print(results)
+#Part du principe que ntree est le bon pour tous les autres modèles
+
+
+# Refais le modèle mais en concentrant les valeurs de mtry autour des valeurs que l'on suspecte être le plus elevee
+cl <- makePSOCKcluster(detectCores() - 1)
+registerDoParallel(cl)  # Enregistrer le cluster
+
+# Définir le contrôle pour la validation croisée
+trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
+
+# Modèle Random Forest
+tuneGrid <- expand.grid(mtry = 100)
 
 mod.rf <- caret::train(
   weight_factor ~ ., 
@@ -67,19 +98,15 @@ mod.rf <- caret::train(
   tuneGrid = tuneGrid
 )
 stopCluster(cl)  # Arrêter le cluster
-mod.rf
+plot(mod.rf)
 # Prédictions avec le meilleur modèle sur l'ensemble de test
 pred <- predict(mod.rf, newdata = testData)
 cm.rf <- confusionMatrix(pred, testData$weight_factor)
 print(cm.rf)
 
-importance <- varImp(mod.rf)
-print(importance)
+
+
 # Modèle SVM
-
-
-
-
 # Prétraitement des données
 
 # Normaliser les colonnes (tout sauf 'weight_factor')
@@ -88,7 +115,7 @@ trainData_normalized <- trainData[, -c("weight_factor")]
 trainData_normalized <- as.data.frame(lapply(trainData_normalized, function(x) (x - mean(x)) / sd(x)))
 #Ajoute le poids aux données
 trainData_scaled <- cbind(weight_factor = trainData$weight_factor, trainData_normalized)
-
+trainData_scaled[is.na(trainData_scaled)] <- 0
 
 # Normaliser les colonnes (tout sauf 'weight_factor')
 testData_normalized <- testData[, -c("weight_factor")]
@@ -101,23 +128,49 @@ testData_scaled[is.na(testData_scaled)] <- 0
 #Modèle SVM
 cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
 registerDoParallel(cl)
-tuneGrid <- expand.grid(C = c(0.1, 0.5, 1, 10), 
-                        sigma = c(0.01, 0.1, 0.5, 1))
+tuneGrid <- expand.grid(C = c(0, 0.01, 0.05))
 
 
 mod.svm <- train(
   weight_factor ~ ., 
   data = trainData_scaled,
-  method = "svmRadial",
+  method = "svmLinear",
   trControl = trainControl,
   tuneGrid = tuneGrid
 )
 
 stopCluster(cl)  # Arrêter le cluster
-
+plot(mod.svm)
+mod.svm
 # Prédictions sur l'ensemble de test
 pred_svm <- predict(mod.svm, newdata = testData_scaled)
 cm.svm <- confusionMatrix(pred_svm, testData_scaled$weight_factor)
+cm.svm
+
+
+#Choisi un C = 0.05
+cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
+registerDoParallel(cl)
+tuneGrid <- expand.grid(C = 0)
+
+
+mod.svm <- train(
+  weight_factor ~ ., 
+  data = trainData_scaled,
+  method = "svmLinear",
+  trControl = trainControl,
+  tuneGrid = tuneGrid
+)
+
+stopCluster(cl)  # Arrêter le cluster
+plot(mod.svm)
+mod.svm
+# Prédictions sur l'ensemble de test
+pred_svm <- predict(mod.svm, newdata = testData_scaled)
+cm.svm <- confusionMatrix(pred_svm, testData_scaled$weight_factor)
+cm.svm
+
+
 trainData_scaled$weight_factor <- as.factor(trainData_scaled$weight_factor)
 
 # Modèle NNet
@@ -156,7 +209,7 @@ registerDoParallel(cl)
 train_control_knn <- trainControl(method = "repeatedcv", number = 10, repeats = 3, classProbs = TRUE)
 
 # Définir une grille d'hyperparamètres à tester pour k
-k_values <- data.frame(k = seq(1, 100, by = 2))  # Tester les valeurs de k de 1 à 20
+k_values <- data.frame(k = seq(1, 200, by = 2))  # Tester les valeurs de k de 1 à 20
 
 # Entraîner le modèle KNN
 mod.knn <- train(
