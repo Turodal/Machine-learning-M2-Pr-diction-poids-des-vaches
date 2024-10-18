@@ -12,13 +12,13 @@ dta <-  fread("donnees/data_img1simple.csv", sep = ";")[,-c(1,3)]
 
 set.seed(123)  # Pour assurer la reproductibilité
 trainData <- fread("donnees/data_img0simple.csv", sep = ";")[,-c(1,3)]
-testData <- fread("donnees/data_img1simple.csv", sep = ";")[,-c(1,3)]
+testData <- fread("donnees/data_img3simple.csv", sep = ";")[,-c(1,3)]
 #transforme en facteur 
 trainData$weight_factor <- as.factor(trainData$weight_factor)
 testData$weight_factor <- as.factor(testData$weight_factor)
 
-plot(trainData$s.area, trainData$s.perimeter, type = "p", lwd = 2, col = trainData$weight_factor)
-plot(trainData$s.perimeter, trainData$s.radius.mean, type = "p", lwd = 2, col = trainData$weight_factor)
+# plot(trainData$s.area, trainData$s.perimeter, type = "p", lwd = 2, col = trainData$weight_factor)
+# plot(trainData$s.perimeter, trainData$s.radius.mean, type = "p", lwd = 2, col = trainData$weight_factor)
 
 
 
@@ -30,11 +30,11 @@ registerDoParallel(cl)  # Enregistrer le cluster
 trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = c(10, 50))
+tuneGrid <- expand.grid(mtry = c(1:20))
 
 
 mod.rf <- caret::train(
-  weight_factor ~ ., 
+  weight_factor ~., 
   data = trainData,
   method = "rf",
   trControl = trainControl, # Tester différentes valeurs de `mtry`
@@ -52,6 +52,11 @@ print(cm.rf)
 class(trainData$weight_factor)
 importance <- varImp(mod.rf)
 print(importance)
+
+#En cherchant le nombre de paramètres à prendre en compte, on trouve que le modèle avec 1 seul paramètres donne la meilleur accuracy
+#Elle est cependant proche de 0.25, les classes étant de tailles quasi-égales, le modèle se rapproche d'un modèle aléatoire pure
+
+
 # Modèle SVM
 # Prétraitement des données
 
@@ -127,19 +132,20 @@ cl <- makePSOCKcluster(detectCores() - 1)  # Réutiliser le cluster
 registerDoParallel(cl)
 
 # Définir le contrôle pour la validation croisée (utiliser repeatedcv)
-train_control_knn <- trainControl(method = "repeatedcv", number = 10, repeats = 3, classProbs = TRUE)
+train_control_knn <- trainControl(method = "repeatedcv", number = 10, repeats = 10, classProbs = TRUE)
 
 # Définir une grille d'hyperparamètres à tester pour k
-k_values <- data.frame(k = seq(1, 100, by = 2))  # Tester les valeurs de k de 1 à 20
-
+k_values <- data.frame(k = seq(1,70, by = 2))  # Tester les valeurs de k de 1 à 20
+k_values
 # Entraîner le modèle KNN
 mod.knn <- train(
-  weight_factor ~ ., 
+  weight_factor ~., 
   data = trainData_scaled,
   method = "knn",
   trControl = train_control_knn,
   tuneGrid = k_values
 )
+
 summary(mod.knn)
 plot(mod.knn)
 stopCluster(cl)  
@@ -149,15 +155,21 @@ pred.knn <- predict(mod.knn, newdata = testData_scaled)
 cm.knn <- confusionMatrix(pred.knn, testData_scaled$weight_factor)
 
 cm.knn
+
+#Après avoir testé le plus de paramètres on garde une valeur de k = 59, d'autres valeurs plus élevées comme 99 donnent des résultats légèrement meilleur mais on préfère avoir un modèle moins complexe 
+mod.knn$bestTune
+
+
+
 #####----Comparaison entre les méthodes----#######
 ##################################################
 
-acc_test <- list( Acc = c(cm.rf$overall[1], cm.svm$overall[1], cm.glmnet$overall[1], cm.knn$overall[1]),
+acc_test <- list( Acc = c(cm.rf$overall[1], cm.svm$overall[1], cm.glm$overall[1], cm.knn$overall[1]),
                   Methode = c("Random Forest", "SVM", "glm", "knn"))
 
 acc_dftest <- data.frame(Methode = acc_test$Methode, Accuracy = acc_test$Acc)
 
-acc_train <- list( Acc = c(mean(mod.rf$results$Accuracy), mean(mod.svm$results$Accuracy), mean(mod.glmnet$results$Accuracy), mean(mod.knn$results$Accuracy)),
+acc_train <- list( Acc = c(mean(mod.rf$results$Accuracy), mean(mod.svm$results$Accuracy), mean(mod.glm$results$Accuracy), mean(mod.knn$results$Accuracy)),
                    Methode = c("Random Forest", "SVM", "glm", "knn"))
 acc_dftrain <- data.frame(Methode = acc_train$Methode, Accuracy = acc_train$Acc)
 
