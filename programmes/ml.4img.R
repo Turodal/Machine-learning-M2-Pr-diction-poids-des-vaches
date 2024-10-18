@@ -44,24 +44,31 @@ registerDoParallel(cl)  # Enregistrer le cluster
 trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.7, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = seq(50, 500, by = 50))
-
-mod.rf <- caret::train(
-  weight_factor ~ ., 
-  data = trainData,
-  method = "rf",
-  trControl = trainControl, # Tester différentes valeurs de `mtry`
-  ntree = 500,
-  tuneGrid = tuneGrid
-)
-stopCluster(cl)  # Arrêter le cluster
-mod.rf
-# Prédictions avec le meilleur modèle sur l'ensemble de test
-pred <- predict(mod.rf, newdata = testData)
-#matrice de confusion
-cm.rf <- confusionMatrix(pred, testData$weight_factor)
-print(cm.rf)
-
+ntree_values <- c(100, 200, 300, 400, 500) 
+for (ntree in ntree_values) {
+  # Entraînement du modèle Random Forest pour chaque ntree
+  mod.rf <- caret::train(
+    weight_factor ~ ., 
+    data = trainData,
+    method = "rf",
+    trControl = trainControl,
+    ntree = ntree,
+    tuneGrid = tuneGrid
+  )
+  
+  # Obtenir le meilleur mtry et l'accuracy associée
+  best_mtry <- mod.rf$bestTune$mtry
+  best_accuracy <- max(mod.rf$results$Accuracy)
+  
+  # Stocker les résultats dans la liste
+  results[[as.character(ntree)]] <- list(
+    ntree = ntree,
+    best_mtry = best_mtry,
+    best_accuracy = best_accuracy
+  )
+}
+#meilleur: ntree = 500 et mtry = 100
+print(results)
 
 cl <- makePSOCKcluster(detectCores() - 1)
 registerDoParallel(cl)
