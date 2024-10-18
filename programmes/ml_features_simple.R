@@ -252,4 +252,3 @@ ggplot(execution_times, aes(x = Methode, y = Time, fill = Methode)) +
        y = "Temps (en secondes)") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
