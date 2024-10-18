@@ -41,6 +41,7 @@ mod.rf <- caret::train(
 )
 stopCluster(cl)  # Arrêter le cluster
 mod.rf
+plot(mod.rf)
 # Prédictions avec le meilleur modèle sur l'ensemble de test
 pred <- predict(mod.rf, newdata = testData)
 #matrice de confusion
@@ -58,7 +59,7 @@ execution_times <- data.frame(Methode = character(), Time = numeric(), stringsAs
 start_time_rf <- Sys.time()
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = 3)
+tuneGrid <- expand.grid(mtry = 4)
 mod.rf <- caret::train(
   weight_factor ~ ., 
   data = trainData,
