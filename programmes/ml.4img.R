@@ -41,7 +41,7 @@ cl <- makePSOCKcluster(detectCores() - 1)
 registerDoParallel(cl)  # Enregistrer le cluster
 
 # Définir le contrôle pour la validation croisée
-trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
+trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.7, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
 tuneGrid <- expand.grid(mtry = seq(50, 500, by = 50))
@@ -84,7 +84,7 @@ cl <- makePSOCKcluster(detectCores() - 1)
 registerDoParallel(cl)  # Enregistrer le cluster
 
 # Définir le contrôle pour la validation croisée
-trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
+trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.7, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
 tuneGrid <- expand.grid(mtry = 100)

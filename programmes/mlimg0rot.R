@@ -42,11 +42,10 @@ cl <- makePSOCKcluster(detectCores() - 1)
 registerDoParallel(cl)  # Enregistrer le cluster
 
 # Définir le contrôle pour la validation croisée
-trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
+trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.7, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = c(10, 50,100, 200, 300))
-
+tuneGrid <- expand.grid(mtry = seq(50, 500, by = 50))
 
 mod.rf <- caret::train(
   weight_factor ~ ., 
@@ -64,8 +63,31 @@ pred <- predict(mod.rf, newdata = testData)
 cm.rf <- confusionMatrix(pred, testData$weight_factor)
 print(cm.rf)
 
-importance <- varImp(mod.rf)
-print(importance)
+cl <- makePSOCKcluster(detectCores() - 1)
+registerDoParallel(cl)  # Enregistrer le cluster
+
+# Définir le contrôle pour la validation croisée
+trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.7, repeats = 10, allowParallel = TRUE)
+
+# Modèle Random Forest
+tuneGrid <- expand.grid(mtry = 500)
+
+mod.rf <- caret::train(
+  weight_factor ~ ., 
+  data = trainData,
+  method = "rf",
+  trControl = trainControl, # Tester différentes valeurs de `mtry`
+  ntree = 500,
+  tuneGrid = tuneGrid
+)
+stopCluster(cl)  # Arrêter le cluster
+mod.rf
+# Prédictions avec le meilleur modèle sur l'ensemble de test
+pred <- predict(mod.rf, newdata = testData)
+#matrice de confusion
+cm.rf <- confusionMatrix(pred, testData$weight_factor)
+print(cm.rf)
+
 # Modèle SVM
 # Prétraitement des données
 
@@ -143,7 +165,7 @@ registerDoParallel(cl)
 train_control_knn <- trainControl(method = "repeatedcv", number = 10, repeats = 3, classProbs = TRUE)
 
 # Définir une grille d'hyperparamètres à tester pour k
-k_values <- data.frame(k = seq(1, 100, by = 2))  # Tester les valeurs de k de 1 à 20
+k_values <- data.frame(k = seq(1, 200, by = 2)) 
 
 # Entraîner le modèle KNN
 mod.knn <- train(

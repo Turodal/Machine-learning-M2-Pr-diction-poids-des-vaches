@@ -62,8 +62,31 @@ pred <- predict(mod.rf, newdata = testData)
 cm.rf <- confusionMatrix(pred, testData$weight_factor)
 print(cm.rf)
 
-importance <- varImp(mod.rf)
-print(importance)
+cl <- makePSOCKcluster(detectCores() - 1)
+registerDoParallel(cl)  # Enregistrer le cluster
+
+# Définir le contrôle pour la validation croisée
+trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.8, repeats = 10, allowParallel = TRUE)
+
+# Modèle Random Forest
+tuneGrid <- expand.grid(mtry = 100)
+
+
+mod.rf <- caret::train(
+  weight_factor ~ ., 
+  data = trainData,
+  method = "rf",
+  trControl = trainControl, # Tester différentes valeurs de `mtry`
+  ntree = 500,
+  tuneGrid = tuneGrid
+)
+stopCluster(cl)  # Arrêter le cluster
+mod.rf
+# Prédictions avec le meilleur modèle sur l'ensemble de test
+pred <- predict(mod.rf, newdata = testData)
+cm.rf <- confusionMatrix(pred, testData$weight_factor)
+print(cm.rf)
+
 
 
 # Modèle SVM
