@@ -12,6 +12,10 @@ library(dplyr)
 dta <- fread("donnees/dataset.csv")
 dta1 <- fread("donnees/data_img0.csv")
 
+execution_times <- data.frame(Methode = character(), Time = numeric(), stringsAsFactors = FALSE)
+mae <- data.frame(Mean_Abolute_Error = numeric(), MLP = character(), stringsAsFactors = FALSE)
+accuracy <- data.frame(Accuracy = numeric(), MLP = character(), stringsAsFactors = FALSE)
+
 #Perceptron multi couches pour estimer la l'intervalle de poids d'une vache----
 
 #On extrait les features et on les normalise
@@ -59,7 +63,9 @@ model_classif %>% compile(
 
 #On entraine le modèle, les poids sont modifiés toutes les 64 lignes du train set (sélectionnées au hasard)
 #Le modèle tourne comme cela 100 fois "epochs"
-system.time(history <- model_classif %>% fit(
+start_time_class_img0 <- Sys.time()
+
+history <- model_classif %>% fit(
   x = train_features, 
   y = train_label,
   batch_size = 64,
@@ -68,7 +74,11 @@ system.time(history <- model_classif %>% fit(
   callbacks = list(
     callback_early_stopping(monitor = "val_loss", patience = 10) #Si la valeur de le fonction de perte reste stable sur 10 epochs on arrête le l'entrainement 
   )
-))
+)
+
+end_time_class_img0 <- Sys.time()
+execution_times <- rbind(execution_times, data.frame(MLP = "Classif_img0", Time = as.numeric(difftime(end_time_class_img0, start_time_class_img0, units = "secs"))))
+
 
 #On regarde les résultats pour le test_set
 #On a une accuracy autour de 0.55
@@ -76,7 +86,7 @@ results <- model_classif %>% evaluate(test_features, test_label)
 cat("Test Loss:", results["loss"], "\n")
 cat("Test Accuracy:", results["accuracy"], "\n")
 
-
+accuracy <- rbind(accuracy, data.frame(Accuracy = results["accuracy"], MLP = "Classif_img0"))
 
 #Perceptron multi couches pour prédire le poids des vaches----
 
@@ -118,7 +128,8 @@ model_poids %>% compile(
 )
 
 # Entraînement du modèle
-system.time(history <- model_poids %>% fit(
+start_time_estim_img0 <- Sys.time()
+history <- model_poids %>% fit(
   x = train_features,
   y = train_target,
   epochs = 300,
@@ -128,12 +139,18 @@ system.time(history <- model_poids %>% fit(
     callback_early_stopping(monitor = "val_loss", patience = 10),  # Arrêt précoce si pas d'amélioration
     callback_reduce_lr_on_plateau(monitor = "val_loss", factor = 0.5, patience = 5)  # Réduction du learning rate si plateau
   )
-))
+)
+
+end_time_estim_img0 <- Sys.time()
+execution_times <- rbind(execution_times, data.frame(MLP = "Estim_img0", Time = as.numeric(difftime(end_time_estim_img0, start_time_estim_img0, units = "secs"))))
 
 # Évaluation du modèle sur les données de test
 results <- model_poids %>% evaluate(test_features, test_target)
 cat("Test Mean Squared Error:", results["loss"], "\n")
 cat("Test Mean Absolute Error:", results["mean_absolute_error"], "\n")
+
+mae <- rbind(mae,data.frame(Mean_Abolute_Error = results["mean_absolute_error"], MLP = "Estim_img0"))
+
 
 # Prédiction
 predictions <- model_poids %>% predict(test_features)
@@ -186,7 +203,9 @@ model_poids_4img %>% compile(
 )
 
 # Entraînement du modèle
-system.time(history <- model_poids_4img %>% fit(
+start_time_estim_4img <- Sys.time()
+
+history <- model_poids_4img %>% fit(
   x = train_features,
   y = train_target,
   epochs = 300,
@@ -196,12 +215,19 @@ system.time(history <- model_poids_4img %>% fit(
     callback_early_stopping(monitor = "val_loss", patience = 10),  # Arrêt précoce si pas d'amélioration
     callback_reduce_lr_on_plateau(monitor = "val_loss", factor = 0.5, patience = 5)  # Réduction du learning rate si plateau
   )
-))
+)
+
+end_time_estim_4img <- Sys.time()
+execution_times <- rbind(execution_times, data.frame(MLP = "Estim_4img", Time = as.numeric(difftime(end_time_estim_4img, start_time_estim_4img, units = "secs"))))
 
 # Évaluation du modèle sur les données de test
 results <- model_poids_4img %>% evaluate(test_features, test_target)
 cat("Test Mean Squared Error:", results["loss"], "\n")
 cat("Test Mean Absolute Error:", results["mean_absolute_error"], "\n")
+
+mae <- rbind(mae,data.frame(Mean_Abolute_Error = results["mean_absolute_error"], MLP = "Estim 4 img"))
+
+
 
 # Prédiction
 predictions <- model_poids_4img %>% predict(test_features)
@@ -248,6 +274,7 @@ colSums(train_label)
 colSums(test_label)
 
 #On définie l'architecture du modèle
+
 model_classif_4img <- keras_model_sequential() %>%
   layer_dense(units = 128,input_shape = c(ncol(features)))%>%
   layer_activation_leaky_relu() %>%
@@ -265,7 +292,10 @@ model_classif_4img %>% compile(
 
 #On entraine le modèle, les poids sont modifiés toutes les 64 lignes du train set (sélectionnées au hasard)
 #Le modèle tourne comme cela 100 fois "epochs"
-system.time(history <- model_classif_4img %>% fit(
+
+start_time_classif_4img <- Sys.time()
+
+history <- model_classif_4img %>% fit(
   x = train_features, 
   y = train_label,
   batch_size = 64,
@@ -274,9 +304,46 @@ system.time(history <- model_classif_4img %>% fit(
   callbacks = list(
     callback_early_stopping(monitor = "val_loss", patience = 10) #Si la valeur de le fonction de perte reste stable sur 10 epochs on arrête le l'entrainement 
   )
-))
+)
+
+end_time_classif_4img <- Sys.time()
+execution_times <- rbind(execution_times, data.frame(MLP = "Classif_4img", Time = as.numeric(difftime(end_time_classif_4img, start_time_classif_4img, units = "secs"))))
 
 #On regarde les résultats pour le test_set
 results <- model_classif_4img %>% evaluate(test_features, test_label)
 cat("Test Loss:", results["loss"], "\n")
 cat("Test Accuracy:", results["accuracy"], "\n")
+
+accuracy <- rbind(accuracy, data.frame(Accuracy = results["accuracy"], MLP = "Classif 4 img"))
+
+
+#Graphiques----
+library(tidyverse)
+ggplot(execution_times, aes(x = MLP, y = Time, fill = MLP)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Temps d'exécution par MLP",
+       subtitle = "Modèles sur features de VGG16 (img0 et les 4 images)",
+       x = "MLP",
+       y = "Temps (en secondes)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(accuracy, aes(x = MLP, y = Accuracy, fill = MLP)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Accuracy par MLP",
+       subtitle = "Modèles sur features de VGG16 (img0 et les 4 images)",
+       x = "MLP",
+       y = "Accuracy") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+ggplot(mae, aes(x = MLP, y = Mean_Abolute_Error, fill = MLP)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Erreur moyenne absolue par MLP",
+       subtitle = "Modèles sur features de VGG16 (img0 et les 4 images)",
+       x = "MLP",
+       y = "Erreur moyenne absolie") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
