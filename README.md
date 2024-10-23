@@ -12,3 +12,14 @@ Pour ce sujet, nous nous basons sur un jeu de données mis en ligne par Mobasshi
 Dans cette présentation, nous nous concentrons sur l’analyse d’image pour estimer le poids vif de vaches avec le réseau neuronal convolutif (CNN) VGG-16. Dans un premier temps, le réseau neuronal nous a permis d’extraire les features des différentes images pour établir un modèle linéaire. Dans un second temps, nous avons tenté de classer les vaches selon des catégories de poids en ayant entrainé VGG-16. Nous comparons le modèle linéaire avec les features à un modèle avec les informations du tableau de données. La classification par VGG-16 sera comparée avec d’autres méthodes de classification comme KNN ou Random Forest.
 
 Mots clés : poids vif, machine learning, vache, VGG, imagerie
+
+
+
+
+#Structure du dépôt Git 
+Le dépôt Git est ordonné de la manière suivante
+- Bibliographie : contient toutes les sources bibliographiques qui ont été étudiées 
+- Données : contient les tableaux de données utilisés dans nos programmes + VGG 16 au format h5
+- Image PP ML M2 : contient les images utilisés dans la présentation PPT
+- Images : contient les images des vaches du jeu de données, chaque fichier contient 4 images et correspond à une vache
+- Programmes : contient les différents script R utilisé, il faut d'abord lancer "Préparation environnement de travail" pour pouvoir utiliser "keras" et "tensorflow" sur R. Il peut arriver que le script ferme votre session R, dans ce cas il faut relancer. 
