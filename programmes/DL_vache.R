@@ -9,8 +9,8 @@ library(imager)
 library(dplyr)
 
 #On utilise les features pour les img0 du jeu de données pour gagner du temps de calcul
-dta <- fread("donnees/dataset.csv")
-dta1 <- fread("donnees/data_img0.csv")
+dta <- fread("donnees/dataset.csv", dec =",")
+dta1 <- fread("donnees/data_img0.csv",dec=",")
 
 execution_times <- data.frame(Methode = character(), Time = numeric(), stringsAsFactors = FALSE)
 mae <- data.frame(Mean_Abolute_Error = numeric(), MLP = character(), stringsAsFactors = FALSE)
@@ -322,7 +322,7 @@ library(tidyverse)
 ggplot(execution_times, aes(x = MLP, y = Time, fill = MLP)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   labs(title = "Temps d'exécution par MLP",
-       subtitle = "Modèles sur features de VGG16 (img0 et les 4 images)",
+       subtitle = "Modèles sur features de VGG16 \n (img0 et les 4 images)",
        x = "MLP",
        y = "Temps (en secondes)") +
   theme_minimal() +
@@ -331,7 +331,7 @@ ggplot(execution_times, aes(x = MLP, y = Time, fill = MLP)) +
 ggplot(accuracy, aes(x = MLP, y = Accuracy, fill = MLP)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   labs(title = "Accuracy par MLP",
-       subtitle = "Modèles sur features de VGG16 (img0 et les 4 images)",
+       subtitle = "Modèles sur features de VGG16 \n (img0 et les 4 images)",
        x = "MLP",
        y = "Accuracy") +
   theme_minimal() +
@@ -341,9 +341,9 @@ ggplot(accuracy, aes(x = MLP, y = Accuracy, fill = MLP)) +
 ggplot(mae, aes(x = MLP, y = Mean_Abolute_Error, fill = MLP)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   labs(title = "Erreur moyenne absolue par MLP",
-       subtitle = "Modèles sur features de VGG16 (img0 et les 4 images)",
+       subtitle = "Modèles sur features de VGG16 \n (img0 et les 4 images)",
        x = "MLP",
-       y = "Erreur moyenne absolie") +
+       y = "Erreur moyenne absolue") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
