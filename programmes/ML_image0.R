@@ -7,7 +7,7 @@ library(nnet)
 
 library(FactoMineR)
 # Charger les données
-dta <- fread("donnees/data_img0.csv", stringsAsFactors = TRUE)[,-c(1,3)]
+dta <- fread("donnees/data_img0.csv", stringsAsFactors = TRUE, dec = ",")[,-c(1,3)]
 
 set.seed(123)  # Pour assurer la reproductibilité
 trainIndex <- createDataPartition(dta$weight_factor, p = 0.7, list = FALSE)  # 70% pour le train

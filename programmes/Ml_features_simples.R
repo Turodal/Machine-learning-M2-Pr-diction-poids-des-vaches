@@ -11,8 +11,8 @@ library(FactoMineR)
 dta <-  fread("donnees/data_img1simple.csv", sep = ";")[,-c(1,3,7,8,9)]
 
 set.seed(123)  # Pour assurer la reproductibilité
-trainData <- fread("donnees/data_img0simple.csv", sep = ";")[,-c(1,3,7,8,9)]
-testData <- fread("donnees/data_img2simple.csv", sep = ";")[,-c(1,3,7,8,9)]
+trainData <- fread("donnees/data_img0simple.csv", sep = ";", dec = ",")[,-c(1,3,7,8,9)]
+testData <- fread("donnees/data_img2simple.csv", sep = ";", dec = ",")[,-c(1,3,7,8,9)]
 #transforme en facteur 
 trainData$weight_factor <- as.factor(trainData$weight_factor)
 testData$weight_factor <- as.factor(testData$weight_factor)

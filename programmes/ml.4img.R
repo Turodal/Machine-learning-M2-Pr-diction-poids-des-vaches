@@ -7,7 +7,7 @@ library(nnet)
 library(FactoMineR)
 # Charger les données
 
-dta <- fread("donnees/data_4img.csv", stringsAsFactors = TRUE)[,-c(1,3)]
+dta <- fread("donnees/data_4img.csv", stringsAsFactors = TRUE, dec = ",")[,-c(1,3)]
 dta <- dta[1:2052]
 
 set.seed(123)  # Pour assurer la reproductibilité
