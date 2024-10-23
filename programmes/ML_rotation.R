@@ -8,7 +8,7 @@ library(nnet)
 library(FactoMineR)
 
 # Charger les données
-dta <- fread("donnees/data_img0rot.csv", stringsAsFactors = TRUE)
+dta <- fread("donnees/data_img0rot.csv", , dec = ",", stringsAsFactors = TRUE)
 dta <- dta[,-c(1,3)]
 
 set.seed(123)  # Pour assurer la reproductibilité

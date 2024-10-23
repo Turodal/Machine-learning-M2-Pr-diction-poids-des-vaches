@@ -10,7 +10,7 @@ library(dplyr)
 
 
 
-dta <- fread("donnees/dataset.csv", sep = ",")
+dta <- fread("donnees/dataset.csv", sep = ",",  dec = ",")
 #sku est le nom de la vache
 dta$sku <- as.factor(dta$sku)
 #va chercher le chemin des images pour toutes les vaches

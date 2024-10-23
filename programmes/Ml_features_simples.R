@@ -6,33 +6,19 @@ library(dplyr)
 library(nnet)
 
 library(FactoMineR)
+
 # Charger les données
-dta <- fread("donnees/data_img0.csv", stringsAsFactors = TRUE)[,-c(1,3)]
+dta <-  fread("donnees/data_img1simple.csv", sep = ";")[,-c(1,3,7,8,9)]
 
 set.seed(123)  # Pour assurer la reproductibilité
-trainIndex <- createDataPartition(dta$weight_factor, p = 0.7, list = FALSE)  # 70% pour le train
-trainData <- dta[trainIndex,]
-testData <- dta[-trainIndex,]
+trainData <- fread("donnees/data_img0simple.csv", sep = ";", dec = ",")[,-c(1,3,7,8,9)]
+testData <- fread("donnees/data_img2simple.csv", sep = ";", dec = ",")[,-c(1,3,7,8,9)]
+#transforme en facteur 
+trainData$weight_factor <- as.factor(trainData$weight_factor)
+testData$weight_factor <- as.factor(testData$weight_factor)
 
-acp <- PCA(dta, quali.sup = 1)
-qualitative_variable <- as.factor(dta[[1]]) 
-# Définir les couleurs pour chaque niveau de la variable qualitative
-colors <- c("red", "blue", "green", "orange")  # Choisissez vos 4 couleurs
-names(colors) <- levels(qualitative_variable)   # Associer les couleurs aux niveaux
-
-# Créer un vecteur de couleurs pour les individus
-individual_colors <- colors[qualitative_variable]
-
-# Tracer la PCA avec les couleurs définies
-plot(acp, 
-     choix = "ind",                # Choisir de tracer les individus
-     col.ind = individual_colors,   # Colorer les individus selon la variable qualitative
-     col.var = "black",            # Couleur des variables
-     habillage = "none",           # Pas de habillage des individus
-     title = "PCA avec 4 couleurs pour la variable qualitative",
-     autoLab = "yes",              # Labels automatiques
-     graph.type = "classic")    
-
+plot(trainData$s.area, trainData$s.perimeter, type = "p", lwd = 2, col = trainData$weight_factor)
+plot(trainData$s.perimeter, trainData$s.radius.mean, type = "p", lwd = 2, col = trainData$weight_factor)
 
 
 # Configuration du cluster pour la parallélisation
@@ -43,18 +29,19 @@ registerDoParallel(cl)  # Enregistrer le cluster
 trainControl <- trainControl(method = "repeatedcv", number = 10, p = 0.7, repeats = 10, allowParallel = TRUE)
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = seq(50, 500, by = 50))
+tuneGrid <- expand.grid(mtry = c(1,2,3,4))
 
 mod.rf <- caret::train(
   weight_factor ~ ., 
   data = trainData,
   method = "rf",
   trControl = trainControl, # Tester différentes valeurs de `mtry`
-  ntree = 500,
+  ntree = 100,
   tuneGrid = tuneGrid
 )
 stopCluster(cl)  # Arrêter le cluster
 mod.rf
+plot(mod.rf)
 # Prédictions avec le meilleur modèle sur l'ensemble de test
 pred <- predict(mod.rf, newdata = testData)
 #matrice de confusion
@@ -72,13 +59,13 @@ execution_times <- data.frame(Methode = character(), Time = numeric(), stringsAs
 start_time_rf <- Sys.time()
 
 # Modèle Random Forest
-tuneGrid <- expand.grid(mtry = 500)
+tuneGrid <- expand.grid(mtry = 4)
 mod.rf <- caret::train(
   weight_factor ~ ., 
   data = trainData,
   method = "rf",
   trControl = trainControl,
-  ntree = 500,
+  ntree = 100,
   tuneGrid = tuneGrid
 )
 
@@ -185,7 +172,7 @@ levels(trainData_scaled$weight_factor) <- make.names(levels(trainData_scaled$wei
 levels(testData_scaled$weight_factor) <- make.names(levels(testData_scaled$weight_factor))
 
 train_control_knn <- trainControl(method = "repeatedcv", number = 10, repeats = 3, classProbs = TRUE)
-k_values <- data.frame(k = seq(1, 100, by = 2)) 
+k_values <- data.frame(k = seq(1, 200, by = 2)) 
 
 mod.knn <- train(
   weight_factor ~ ., 
@@ -211,7 +198,7 @@ train_control_knn <- trainControl(
   classProbs = TRUE, 
   allowParallel = FALSE  # Désactiver le parallélisme
 )
-k_values <- data.frame(k = 7) 
+k_values <- data.frame(k = 147) 
 
 mod.knn <- train(
   weight_factor ~ ., 
@@ -248,7 +235,7 @@ acc_dftest <- data.frame(Methode = acc_test$Methode, Accuracy = acc_test$Acc)
 ggplot(acc_dftest, aes(x = Methode, y = Accuracy, fill = Methode)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   labs(title = "Accuracy par Méthode lors du test",
-       subtitle = "modèles sur image 0",
+       subtitle = "modèles sur features simple (image 0 et 2)",
        x = "Méthode",
        y = "Accuracy") +
   theme_minimal() +
@@ -261,9 +248,8 @@ print(execution_times)
 ggplot(execution_times, aes(x = Methode, y = Time, fill = Methode)) +
   geom_bar(stat = "identity", position = position_dodge()) +
   labs(title = "Temps d'exécution par Méthode",
-       subtitle = "modèles sur image 0",
+       subtitle = "modèles sur features simple (image 0 et 2)",
        x = "Méthode",
        y = "Temps (en secondes)") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
