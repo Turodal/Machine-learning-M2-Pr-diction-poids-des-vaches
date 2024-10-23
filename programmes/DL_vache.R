@@ -9,8 +9,8 @@ library(imager)
 library(dplyr)
 
 #On utilise les features pour les img0 du jeu de données pour gagner du temps de calcul
-dta <- fread("donnees/dataset.csv")
-dta1 <- fread("donnees/data_img0.csv")
+dta <- fread("donnees/dataset.csv", dec =",")
+dta1 <- fread("donnees/data_img0.csv",dec=",")
 
 execution_times <- data.frame(Methode = character(), Time = numeric(), stringsAsFactors = FALSE)
 mae <- data.frame(Mean_Abolute_Error = numeric(), MLP = character(), stringsAsFactors = FALSE)
