@@ -7,6 +7,7 @@ library(keras)
 library(tensorflow)
 library(imager)
 library(dplyr)
+library(remotes)
 
 #On utilise les features pour les img0 du jeu de données pour gagner du temps de calcul
 dta <- fread("donnees/dataset.csv", dec =",")
@@ -90,7 +91,7 @@ accuracy <- rbind(accuracy, data.frame(Accuracy = results["accuracy"], MLP = "Cl
 
 #Perceptron multi couches pour prédire le poids des vaches----
 
-dta1 <- fread("donnees/data_img0.csv")
+dta1 <- fread("donnees/data_img0.csv",sep=";")
 
 #On extrait les features et les poids des vaches
 features <- as.matrix(dta1[, -c(1:3)])
@@ -165,7 +166,7 @@ abline(a=0,b=1)
 
 ##Perceptron multi couche avec 4 images sous angles différents pour estimer le poids----
 
-dta4img <- fread("donnees/data_4img.csv")
+dta4img <- fread("donnees/data_4img.csv", dec=",")
 dta4img <- dta4img[-nrow(dta4img)]
 #On extrait les features et les poids des vaches
 features <- as.matrix(dta4img[, -c(1:3)])
@@ -244,7 +245,7 @@ abline(a=0,b=1)
 
 ##Perceptron multi couche avec 4 images sous angles différents pur estimer l'intervalle de poids d'une vache----
 
-dta4img <- fread("donnees/data_4img.csv")
+dta4img <- fread("donnees/data_4img.csv", dec=",")
 dta4img <- dta4img[-nrow(dta4img),]
 
 features <- as.matrix(dta4img[,-c(1:3)])
